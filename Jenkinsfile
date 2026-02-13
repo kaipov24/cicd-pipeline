@@ -42,6 +42,15 @@ pipeline {
       }
     }
 
+    stage('Trivy scan') {
+      steps {
+        script {
+          def image = (env.BRANCH_NAME == 'main') ? 'nodemain:v1.0' : 'nodedev:v1.0'
+          sh "trivy image --no-progress --severity HIGH,CRITICAL ${image}"
+        }
+      }
+    }
+
     stage('Push to DockerHub') {
       steps {
         script {
