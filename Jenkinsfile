@@ -47,12 +47,14 @@ pipeline {
         script {
           def isMain = env.BRANCH_NAME == 'main'
           def image = isMain ? 'nodemain:v1.0' : 'nodedev:v1.0'
-          def name = isMain ? 'app-main' : 'app-dev'
+          def containerName = isMain ? 'app-main' : 'app-dev'
           def port = isMain ? '3000' : '3001'
 
           sh """
-          docker rm -f ${name} || true
-          docker run -d --name ${name} --expose ${port} -p ${port}:3000 ${image}
+            set -eux
+            docker rm -f ${containerName} || true
+            docker run -d --name ${containerName} --expose ${port} -p ${port}:3000 ${image}
+            docker ps --filter "name=${containerName}"
           """
         }
       }
