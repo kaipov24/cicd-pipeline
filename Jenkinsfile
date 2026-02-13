@@ -14,14 +14,11 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
-        echo "BRANCH_NAME=${env.BRANCH_NAME}"
       }
     }
 
     stage('Build') {
       steps {
-        sh 'node -v'
-        sh 'npm -v'
         sh 'npm install'
       }
     }
@@ -37,10 +34,8 @@ pipeline {
         script {
           if (env.BRANCH_NAME == 'main') {
             sh 'docker build -t nodemain:v1.0 .'
-          } else if (env.BRANCH_NAME == 'dev') {
-            sh 'docker build -t nodedev:v1.0 .'
           } else {
-            error("Unsupported branch: ${env.BRANCH_NAME}")
+            sh 'docker build -t nodedev:v1.0 .'
           }
         }
       }
@@ -49,20 +44,14 @@ pipeline {
     stage('Deploy') {
       steps {
         script {
-          def isMain = (env.BRANCH_NAME == 'main')
+          def isMain = env.BRANCH_NAME == 'main'
           def image = isMain ? 'nodemain:v1.0' : 'nodedev:v1.0'
-          def containerName = isMain ? 'app-main' : 'app-dev'
+          def name = isMain ? 'app-main' : 'app-dev'
+          def port = isMain ? '3000' : '3001'
 
           sh """
-            set -eux
-            docker rm -f ${containerName} || true
-
-            ${isMain ?
-              "docker run -d --name ${containerName} --expose 3000 -p 3000:3000 ${image}" :
-              "docker run -d --name ${containerName} --expose 3001 -p 3001:3000 ${image}"
-            }
-
-            docker ps --filter "name=${containerName}"
+          docker rm -f ${name} || true
+          docker run -d --name ${name} --expose ${port} -p ${port}:3000 ${image}
           """
         }
       }
