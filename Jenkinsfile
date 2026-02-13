@@ -1,8 +1,8 @@
 pipeline {
   agent any
 
-  tools { 
-    nodejs 'node' 
+  environment {
+    PATH = "/var/lib/jenkins/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/node/bin:${env.PATH}"
   }
 
   options {
