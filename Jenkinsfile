@@ -42,6 +42,25 @@ pipeline {
       }
     }
 
+    stage('Push to DockerHub') {
+      steps {
+        script {
+          def isMain = env.BRANCH_NAME == 'main'
+          def localImage = isMain ? 'nodemain:v1.0' : 'nodedev:v1.0'
+          def remoteImage = isMain ? 'kaipov24/cicd-pipeline:nodemain-v1.0'
+                                  : 'kaipov24/cicd-pipeline:nodedev-v1.0'
+
+          withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+            sh """
+              echo \$PASS | docker login -u \$USER --password-stdin
+              docker tag ${localImage} ${remoteImage}
+              docker push ${remoteImage}
+            """
+          }
+        }
+      }
+    }
+
     stage('Deploy') {
       steps {
         script {
