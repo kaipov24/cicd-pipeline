@@ -1,5 +1,5 @@
 FROM node:18-alpine
 WORKDIR /opt
-ADD . /opt
+COPY . /opt
 RUN npm install
-ENTRYPOINT npm run start
+CMD ["npm", "run", "start"]
