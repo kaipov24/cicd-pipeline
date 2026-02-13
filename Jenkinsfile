@@ -1,6 +1,10 @@
 pipeline {
   agent any
 
+  tools {
+    nodejs 'node-7.8.0'
+  }
+
   options {
     timestamps()
     disableConcurrentBuilds()
@@ -10,29 +14,21 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
-        sh 'git rev-parse --abbrev-ref HEAD'
+        echo "BRANCH_NAME=${env.BRANCH_NAME}"
       }
     }
 
     stage('Build') {
       steps {
-        script {
-          docker.image('node:7.8.0').inside {
-            sh 'node -v'
-            sh 'npm -v'
-            sh 'npm install'
-          }
-        }
+        sh 'node -v'
+        sh 'npm -v'
+        sh 'npm install'
       }
     }
 
     stage('Test') {
       steps {
-        script {
-          docker.image('node:7.8.0').inside {
-            sh 'npm test'
-          }
-        }
+        sh 'npm test'
       }
     }
 
@@ -55,18 +51,18 @@ pipeline {
         script {
           def isMain = (env.BRANCH_NAME == 'main')
           def image = isMain ? 'nodemain:v1.0' : 'nodedev:v1.0'
-          def hostPort = isMain ? '3000' : '3001'
           def containerName = isMain ? 'app-main' : 'app-dev'
 
           sh """
             set -eux
             docker rm -f ${containerName} || true
 
-            # run new container
-            docker run -d --name ${containerName} --expose ${hostPort} -p ${hostPort}:3000 ${image}
+            ${isMain ?
+              "docker run -d --name ${containerName} --expose 3000 -p 3000:3000 ${image}" :
+              "docker run -d --name ${containerName} --expose 3001 -p 3001:3000 ${image}"
+            }
 
             docker ps --filter "name=${containerName}"
-            echo "Deployed ${env.BRANCH_NAME} => http://localhost:${hostPort}"
           """
         }
       }
