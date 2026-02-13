@@ -52,9 +52,11 @@ pipeline {
 
           withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
             sh """
-              echo \$PASS | docker login -u \$USER --password-stdin
+              set -eux
+              echo \$PASS | docker login -u \$USER --password-stdin https://index.docker.io/v1/
               docker tag ${localImage} ${remoteImage}
               docker push ${remoteImage}
+              docker logout https://index.docker.io/v1/
             """
           }
         }
