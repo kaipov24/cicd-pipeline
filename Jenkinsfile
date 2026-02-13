@@ -81,5 +81,16 @@ pipeline {
         }
       }
     }
+    stage('Trigger single pipeline deploy main/dev') {
+      steps {
+        script {
+          if (env.BRANCH_NAME == 'main') {
+            build job: 'Deploy_to_main', wait: false
+          } else if (env.BRANCH_NAME == 'dev') {
+            build job: 'Deploy_to_dev', wait: false
+          }
+        }
+      }
+    }
   }
 }
