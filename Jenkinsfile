@@ -3,6 +3,7 @@ pipeline {
 
   environment {
     PATH = "/var/lib/jenkins/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/node/bin:${env.PATH}"
+    TRIVY_CACHE_DIR = "/var/lib/jenkins/trivy-cache"
   }
 
   options {
@@ -40,10 +41,6 @@ pipeline {
           }
         }
       }
-    }
-
-    environment {
-      TRIVY_CACHE_DIR = "/var/lib/jenkins/trivy-cache"
     }
 
     stage('Trivy scan') {
