@@ -1,3 +1,5 @@
+@Library('shared-lib') _
+
 pipeline {
   agent any
 
@@ -16,11 +18,14 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
+        echo "BRANCH_NAME=${env.BRANCH_NAME}"
       }
     }
 
     stage('Build') {
       steps {
+        sh 'node -v'
+        sh 'npm -v'
         sh 'npm install'
       }
     }
@@ -31,14 +36,17 @@ pipeline {
       }
     }
 
+    stage('Hadolint') {
+      steps {
+        script { ci.hadolint() }
+      }
+    }
+
     stage('Build Docker image') {
       steps {
         script {
-          if (env.BRANCH_NAME == 'main') {
-            sh 'docker build -t nodemain:v1.0 .'
-          } else {
-            sh 'docker build -t nodedev:v1.0 .'
-          }
+          def tag = ci.dockerTagForBranch(env.BRANCH_NAME) 
+          sh "docker build -t ${tag} ."
         }
       }
     }
@@ -46,8 +54,8 @@ pipeline {
     stage('Trivy scan') {
       steps {
         script {
-          def image = (env.BRANCH_NAME == 'main') ? 'nodemain:v1.0' : 'nodedev:v1.0'
-          sh "trivy image --no-progress --severity HIGH,CRITICAL ${image}"
+          def tag = ci.dockerTagForBranch(env.BRANCH_NAME)
+          ci.trivyScan(tag)
         }
       }
     }
@@ -55,21 +63,9 @@ pipeline {
     stage('Push to DockerHub') {
       steps {
         script {
-          def isMain = env.BRANCH_NAME == 'main'
-          def localImage = isMain ? 'nodemain:v1.0' : 'nodedev:v1.0'
-          def remoteImage = isMain ? 'kairatkaipov/cicd-pipeline:nodemain-v1.0'
-                         : 'kairatkaipov/cicd-pipeline:nodedev-v1.0'
-
-
-          withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-            sh """
-              set -eux
-              echo \$PASS | docker login -u \$USER --password-stdin https://index.docker.io/v1/
-              docker tag ${localImage} ${remoteImage}
-              docker push ${remoteImage}
-              docker logout https://index.docker.io/v1/
-            """
-          }
+          def localImage  = ci.dockerTagForBranch(env.BRANCH_NAME)
+          def remoteImage = ci.dockerRemoteForBranch(env.BRANCH_NAME)
+          ci.pushImage(localImage, remoteImage, 'dockerhub')
         }
       }
     }
@@ -77,21 +73,13 @@ pipeline {
     stage('Deploy') {
       steps {
         script {
-          def isMain = env.BRANCH_NAME == 'main'
-          def image = isMain ? 'nodemain:v1.0' : 'nodedev:v1.0'
-          def containerName = isMain ? 'app-main' : 'app-dev'
-          def port = isMain ? '3000' : '3001'
-
-          sh """
-            set -eux
-            docker rm -f ${containerName} || true
-            docker run -d --name ${containerName} --expose ${port} -p ${port}:3000 ${image}
-            docker ps --filter "name=${containerName}"
-          """
+          def localImage = ci.dockerTagForBranch(env.BRANCH_NAME)
+          ci.deploy(env.BRANCH_NAME, localImage)
         }
       }
     }
-    stage('Trigger single pipeline deploy main/dev') {
+
+   stage('Trigger single pipeline deploy main/dev') {
       steps {
         script {
           if (env.BRANCH_NAME == 'main') {
