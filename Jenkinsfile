@@ -42,6 +42,10 @@ pipeline {
       }
     }
 
+    environment {
+      TRIVY_CACHE_DIR = "/var/lib/jenkins/trivy-cache"
+    }
+
     stage('Trivy scan') {
       steps {
         script {
