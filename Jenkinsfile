@@ -25,7 +25,7 @@ pipeline {
     stage('Build') {
       steps {
         script {
-          docker.image('node:7.8.0').inside {
+          docker.image('node:7.8.0').inside('-i') {
             dir(env.WORKSPACE) {
               sh 'node -v'
               sh 'npm -v'
@@ -39,7 +39,7 @@ pipeline {
     stage('Test') {
       steps {
         script {
-          docker.image('node:7.8.0').inside {
+          docker.image('node:7.8.0').inside('-i') {
             dir(env.WORKSPACE) {
               sh 'node -v'
               sh 'npm -v'
