@@ -1,4 +1,4 @@
-@Library('shared-lib') _
+@Library('JenkinsTesLib') _
 
 pipeline {
   agent any
@@ -92,3 +92,36 @@ pipeline {
     }
   }
 }
+
+// pipeline {
+//   agent any
+
+//   options {
+//     timestamps()
+//   }
+
+//   stages {
+//     stage('Deploy') {
+//       steps {
+//         script {
+
+//           def image = (params.ENV == 'main')
+//             ? "kairatkaipov/cicd-pipeline:nodemain-${params.TAG}"
+//             : "kairatkaipov/cicd-pipeline:nodedev-${params.TAG}"
+
+//           def container = (params.ENV == 'main') ? "app-main" : "app-dev"
+//           def port = (params.ENV == 'main') ? "3000" : "3001"
+
+//           sh """
+//             set -eux
+//             docker pull ${image}
+//             docker rm -f ${container} || true
+//             docker run -d --name ${container} -p ${port}:3000 ${image}
+//             docker ps --filter name=${container}
+//             echo "Deployed ${params.ENV} on port ${port}"
+//           """
+//         }
+//       }
+//     }
+//   }
+// }
