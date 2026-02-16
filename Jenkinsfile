@@ -3,8 +3,11 @@
 pipeline {
   agent any
 
+  tools {
+    nodejs 'node'
+  }
+
   environment {
-    PATH = "/var/lib/jenkins/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/node/bin:${env.PATH}"
     TRIVY_CACHE_DIR = "/var/lib/jenkins/trivy-cache"
   }
 
@@ -15,6 +18,7 @@ pipeline {
   }
 
   stages {
+
     stage('Checkout') {
       steps {
         checkout scm
@@ -32,7 +36,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh 'npm test'
+        sh 'npm test -- --watchAll=false'
       }
     }
 
@@ -45,8 +49,8 @@ pipeline {
     stage('Build Docker image') {
       steps {
         script {
-          def tag = ci.dockerTagForBranch(env.BRANCH_NAME) 
-          sh "docker build -t ${tag} ."
+          def localImage = ci.dockerTagForBranch(env.BRANCH_NAME)
+          sh "docker build -t ${localImage} ."
         }
       }
     }
@@ -54,8 +58,8 @@ pipeline {
     stage('Trivy scan') {
       steps {
         script {
-          def tag = ci.dockerTagForBranch(env.BRANCH_NAME)
-          ci.trivyScan(tag)
+          def image = ci.dockerTagForBranch(env.BRANCH_NAME)
+          ci.trivyScan(image)
         }
       }
     }
@@ -70,16 +74,7 @@ pipeline {
       }
     }
 
-    stage('Deploy') {
-      steps {
-        script {
-          def localImage = ci.dockerTagForBranch(env.BRANCH_NAME)
-          ci.deploy(env.BRANCH_NAME, localImage)
-        }
-      }
-    }
-
-   stage('Trigger single pipeline deploy main/dev') {
+    stage('Trigger single pipeline deploy main/dev') {
       steps {
         script {
           if (env.BRANCH_NAME == 'main') {
@@ -90,38 +85,6 @@ pipeline {
         }
       }
     }
+
   }
 }
-
-// pipeline {
-//   agent any
-
-//   options {
-//     timestamps()
-//   }
-
-//   stages {
-//     stage('Deploy') {
-//       steps {
-//         script {
-
-//           def image = (params.ENV == 'main')
-//             ? "kairatkaipov/cicd-pipeline:nodemain-${params.TAG}"
-//             : "kairatkaipov/cicd-pipeline:nodedev-${params.TAG}"
-
-//           def container = (params.ENV == 'main') ? "app-main" : "app-dev"
-//           def port = (params.ENV == 'main') ? "3000" : "3001"
-
-//           sh """
-//             set -eux
-//             docker pull ${image}
-//             docker rm -f ${container} || true
-//             docker run -d --name ${container} -p ${port}:3000 ${image}
-//             docker ps --filter name=${container}
-//             echo "Deployed ${params.ENV} on port ${port}"
-//           """
-//         }
-//       }
-//     }
-//   }
-// }
