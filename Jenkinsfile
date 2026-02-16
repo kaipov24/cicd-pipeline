@@ -23,10 +23,11 @@ pipeline {
     }
 
     stage('Build') {
-      steps {
+      docker.image('node:7.8.0').inside {
         sh 'node -v'
         sh 'npm -v'
         sh 'npm install'
+        sh 'npm test'
       }
     }
 
