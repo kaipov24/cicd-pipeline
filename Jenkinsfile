@@ -36,7 +36,7 @@ pipeline {
 
     stage('Test') {
       steps {
-        sh 'npm test -- --watchAll=false'
+        sh 'npm test'
       }
     }
 
@@ -85,6 +85,5 @@ pipeline {
         }
       }
     }
-
   }
 }
