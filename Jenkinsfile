@@ -24,31 +24,27 @@ pipeline {
 
     stage('Build') {
       steps {
-        script {
-          docker.image('node:7.8.0').inside('-i') {
-            dir(env.WORKSPACE) {
-              sh 'node -v'
-              sh 'npm -v'
-              sh 'npm install'
-            }
-          }
-        }
+        sh '''
+          docker rm -f node-build || true
+          docker run -d --name node-build -v $PWD:/app -w /app node:7.8.0 tail -f /dev/null
+          docker exec node-build node -v
+          docker exec node-build npm -v
+          docker exec node-build npm install
+        '''
       }
     }
 
     stage('Test') {
       steps {
-        script {
-          docker.image('node:7.8.0').inside('-i') {
-            dir(env.WORKSPACE) {
-              sh 'node -v'
-              sh 'npm -v'
-              sh 'npm test'
-            }
-          }
-        }
+        sh '''
+          docker exec node-build node -v
+          docker exec node-build npm -v
+          docker exec node-build npm test
+          docker rm -f node-build
+        '''
       }
     }
+
 
     stage('Hadolint') {
       steps {
