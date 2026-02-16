@@ -3,8 +3,11 @@
 pipeline {
   agent any
 
+  tools {
+    nodejs 'node'
+  }
+
   environment {
-    PATH = "/var/lib/jenkins/tools/jenkins.plugins.nodejs.tools.NodeJSInstallation/node/bin:${env.PATH}"
     TRIVY_CACHE_DIR = "/var/lib/jenkins/trivy-cache"
   }
 
@@ -15,6 +18,7 @@ pipeline {
   }
 
   stages {
+
     stage('Checkout') {
       steps {
         checkout scm
@@ -24,27 +28,17 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh '''
-          docker rm -f node-build || true
-          docker run -d --name node-build -v $PWD:/app -w /app node:7.8.0 tail -f /dev/null
-          docker exec node-build node -v
-          docker exec node-build npm -v
-          docker exec node-build npm install
-        '''
+        sh 'node -v'
+        sh 'npm -v'
+        sh 'npm install'
       }
     }
 
     stage('Test') {
       steps {
-        sh '''
-          docker exec node-build node -v
-          docker exec node-build npm -v
-          docker exec node-build npm test
-          docker rm -f node-build
-        '''
+        sh 'npm test -- --watchAll=false'
       }
     }
-
 
     stage('Hadolint') {
       steps {
@@ -55,8 +49,8 @@ pipeline {
     stage('Build Docker image') {
       steps {
         script {
-          def tag = ci.dockerTagForBranch(env.BRANCH_NAME) 
-          sh "docker build -t ${tag} ."
+          def localImage = ci.dockerTagForBranch(env.BRANCH_NAME)
+          sh "docker build -t ${localImage} ."
         }
       }
     }
@@ -64,8 +58,8 @@ pipeline {
     stage('Trivy scan') {
       steps {
         script {
-          def tag = ci.dockerTagForBranch(env.BRANCH_NAME)
-          ci.trivyScan(tag)
+          def image = ci.dockerTagForBranch(env.BRANCH_NAME)
+          ci.trivyScan(image)
         }
       }
     }
@@ -80,16 +74,7 @@ pipeline {
       }
     }
 
-    stage('Deploy') {
-      steps {
-        script {
-          def localImage = ci.dockerTagForBranch(env.BRANCH_NAME)
-          ci.deploy(env.BRANCH_NAME, localImage)
-        }
-      }
-    }
-
-   stage('Trigger single pipeline deploy main/dev') {
+    stage('Trigger single pipeline deploy main/dev') {
       steps {
         script {
           if (env.BRANCH_NAME == 'main') {
@@ -100,6 +85,7 @@ pipeline {
         }
       }
     }
+
   }
 }
 
